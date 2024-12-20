@@ -47,7 +47,6 @@ Options
 - `-C <always|never|auto>` Enable or disable color output, default is `auto`
 - `-v` Verbose output
 
-
 License
 -------
 

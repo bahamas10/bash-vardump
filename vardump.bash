@@ -36,11 +36,12 @@
 #	['bar']='2'
 # )
 # --------------------------
+# ```
 #
 # Arguments:
 #   -v                      verbose output
 #   -C [always|auto|never]  when to colorize output, defaults to auto
-# ```
+#
 vardump() {
 	# read arguments
 	local verbose=false
