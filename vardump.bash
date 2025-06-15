@@ -66,22 +66,19 @@ vardump() {
 
 	# optionally load colors
 	if [[ $whencolor == always ]] || [[ $whencolor == auto && -t 1 ]]; then
-		local color_green=$(tput setaf 2)
-		local color_magenta=$(tput setaf 5)
-		local color_rst=$(tput sgr0)
-		local color_dim=$(tput dim)
-		local color_value=$color_green
-		local color_key=$color_magenta
-		local color_length=$color_magenta
+		local color_green=$'\e[32m'
+		local color_magenta=$'\e[35m'
+		local color_rst=$'\e[0m'
+		local color_dim=$'\e[2m'
 	else
 		local color_green=''
 		local color_magenta=''
 		local color_rst=''
 		local color_dim=''
-		local color_value=''
-		local color_key=''
-		local color_length=''
 	fi
+	local color_value=$color_green
+	local color_key=$color_magenta
+	local color_length=$color_magenta
 
 	# optionally print header
 	if $verbose; then
