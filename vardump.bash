@@ -100,12 +100,19 @@ vardump() {
 	# nameref, whereas parsing the output of `declare -p <name>` seems to
 	# correctly give `-n` as the set of arguments used.  Perhaps just parse
 	# the output of `declare -p` from above here instead?
-	local attrs
-	IFS='' read -ra attrs <<< "${!name@a}"
+	#
+	# also, the atter is a string like "ri" (where r is read only, i is
+	# integer) so we have to convert it into an array
+	local -a attrs=()
+	local attr_string=${!name@a}
+	local i
+	for ((i = 0; i < ${#attr_string}; i++)); do
+		local attr=${attr_string:i:1}
+		attrs+=("$attr")
+	done
 
 	# parse the variable attributes and construct a human-readable string
 	local attributes=()
-	local attr
 	local typ=''
 	for attr in "${attrs[@]}"; do
 		local s=''
@@ -195,20 +202,26 @@ vardump() {
 # if we are run directly (not-sourced) then run through some examples
 if ! (return &>/dev/null); then
 	declare s='some string'
-	declare -r READ_ONLY='this cant be changed'
+	declare -r read_only='this cant be changed'
 	declare -i int_value=5
+	declare -ri read_only_int=8
 
 	declare -a simple_array=(foo bar baz "$(tput setaf 1)red$(tput sgr0)")
 	declare -a sparse_array=([0]=hi [5]=bye [7]=ok)
 	declare -A assoc_array=([foo]=1 [bar]=2)
 
+	vars=(
+		s read_only int_value read_only_int
+		simple_array sparse_array assoc_array
+	)
+
 	echo 'simple vardump'
-	for var in s READ_ONLY int_value simple_array sparse_array assoc_array; do
+	for var in "${vars[@]}"; do
 		vardump "$var"
 	done
 
 	echo 'verbose vardump'
-	for var in s READ_ONLY int_value simple_array sparse_array assoc_array; do
+	for var in "${vars[@]}"; do
 		vardump -v "$var"
 		echo
 	done
