@@ -183,8 +183,21 @@ vardump() {
 
 }
 
-if ! (return 0 &>/dev/null); then
-	# if we are run directly (not-sourced) then run through some examples
+_vardump-complete() {
+        COMPREPLY=(
+                # add all variables
+                $(compgen -v -- "${COMP_WORDS[COMP_CWORD]}")
+
+                # add the individual flags TODO add `-C <arg>`
+                $(compgen -W '-v' -- "${COMP_WORDS[COMP_CWORD]}")
+        )
+}
+
+if ( return 0 &>/dev/null ); then
+        # we are being sourced
+        complete -F _vardump-complete vardump
+else
+	# we are run directly (not-sourced) - run through some examples
 	declare s='some string'
 	declare -r read_only='this cant be changed'
 	declare -i int_value=5
