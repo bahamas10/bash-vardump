@@ -44,98 +44,86 @@
 #
 vardump() {
 	# read arguments
-	local verbose=false
-	local whencolor='auto'
-	local OPTIND OPTARG opt
-	while getopts 'C:v' opt; do
-		case "$opt" in
-			C) whencolor=$OPTARG;;
-			v) verbose=true;;
+	local _vd_verbose=false
+	local _vd_color='auto'
+	local OPTIND OPTARG _vd_opt
+	while getopts 'C:v' _vd_opt; do
+		case "$_vd_opt" in
+			C) _vd_color=$OPTARG;;
+			v) _vd_verbose=true;;
 			*) return 1;;
 		esac
 	done
 	shift "$((OPTIND - 1))"
 
 	# read variable name
-	local name=$1
+	local _vd_name=$1
 
-	if [[ -z $name ]]; then
+	if [[ -z $_vd_name ]]; then
 		echo 'vardump: name required as first argument' >&2
 		return 1
 	fi
 
 	# optionally load colors
-	if [[ $whencolor == always ]] || [[ $whencolor == auto && -t 1 ]]; then
-		local color_green=$'\e[32m'
-		local color_magenta=$'\e[35m'
-		local color_rst=$'\e[0m'
-		local color_dim=$'\e[2m'
-	else
-		local color_green=''
-		local color_magenta=''
-		local color_rst=''
-		local color_dim=''
+	local -A _vd_colors=()
+	if [[ $_vd_color == always ]] || [[ $_vd_color == auto && -t 1 ]]; then
+		_vd_colors[green]=$'\e[32m'
+		_vd_colors[magenta]=$'\e[35m'
+		_vd_colors[rst]=$'\e[0m'
+		_vd_colors[dim]=$'\e[2m'
+
+		_vd_colors[value]=${_vd_colors[green]}
+		_vd_colors[key]=${_vd_colors[magenta]}
+		_vd_colors[length]=${_vd_colors[magenta]}
 	fi
-	local color_value=$color_green
-	local color_key=$color_magenta
-	local color_length=$color_magenta
 
 	# optionally print header
-	if $verbose; then
-		echo "${color_dim}--------------------------${color_rst}"
-		echo "${color_dim}vardump: ${color_rst}$name"
+	if $_vd_verbose; then
+		echo "${_vd_colors[dim]}--------------------------${_vd_colors[rst]}"
+		echo "${_vd_colors[dim]}vardump: ${_vd_colors[rst]}$_vd_name"
 	fi
 
 	# ensure the variable is defined
-	if ! declare -p "$name" &>/dev/null; then
-		echo "variable ${name@Q} not defined" >&2
+	if ! declare -p "$_vd_name" &>/dev/null; then
+		echo "variable ${_vd_name@Q} not defined" >&2
 		return 1
 	fi
 
 	# get the variable attributes - this will tell us what kind of variable
 	# it is.
-	#
-	# XXX dave says - is this ideal? when the variable is a nameref (using
-	# `declare -n` or `local -n`) it seems like this method follows the
-	# nameref, whereas parsing the output of `declare -p <name>` seems to
-	# correctly give `-n` as the set of arguments used.  Perhaps just parse
-	# the output of `declare -p` from above here instead?
-	#
-	# also, the atter is a string like "ri" (where r is read only, i is
-	# integer) so we have to convert it into an array
-	local -a attrs=()
-	local attr_string=${!name@a}
-	local i
-	for ((i = 0; i < ${#attr_string}; i++)); do
-		local attr=${attr_string:i:1}
-		attrs+=("$attr")
+	local -a _vd_attrs=()
+	local _vd_attr_string=${!_vd_name@a}
+	local _vd_i
+	for ((_vd_i = 0; _vd_i < ${#_vd_attr_string}; _vd_i++)); do
+		local _vd_attr=${_vd_attr_string:_vd_i:1}
+		_vd_attrs+=("$_vd_attr")
 	done
 
 	# parse the variable attributes and construct a human-readable string
-	local attributes=()
-	local typ=''
-	for attr in "${attrs[@]}"; do
-		local s=''
-		case "$attr" in
-			a) s='indexed array'; typ='a';;
-			A) s='associative array'; typ='A';;
-			r) s='read-only';;
-			i) s='integer';;
-			g) s='global';;
-			x) s='exported';;
-			*) s="unknown";;
+	local _vd_attributes=()
+	local _vd_typ=''
+	for _vd_attr in "${_vd_attrs[@]}"; do
+		local _vd_s=''
+		case "$_vd_attr" in
+			a) _vd_s='indexed array'; _vd_typ='a';;
+			A) _vd_s='associative array'; _vd_typ='A';;
+			r) _vd_s='read-only';;
+			i) _vd_s='integer';;
+			g) _vd_s='global';;
+			x) _vd_s='exported';;
+			*) _vd_s="unknown";;
 		esac
-		attributes+=("($attr)$s")
+		_vd_attributes+=("($_vd_attr)$_vd_s")
 	done
 
 	# optionally print the attributes to the user
-	if $verbose; then
-		echo -n "${color_dim}attributes: ${color_rst}"
-		if [[ -n ${attributes[0]} ]]; then
+	if $_vd_verbose; then
+		echo -n "${_vd_colors[dim]}attributes: ${_vd_colors[rst]}"
+		if [[ -n ${_vd_attributes[0]} ]]; then
 			# separate the list of attributes by a `/` character
 			(
 			IFS=/
-			echo -n "${attributes[*]}"
+			echo -n "${_vd_attributes[*]}"
 			)
 		else
 			echo -n '(none)'
@@ -145,62 +133,58 @@ vardump() {
 
 	# print the variable itself! we use $typ defined above to format it
 	# appropriately.
-	#
-	# we *pray* the user doesn't use this variable name in their own code or
-	# we'll hit a circular reference error (THAT WE CAN'T CATCH OURSELVES IN
-	# CODE - lame)
-	local -n __vardump_name="$name"
+	local -n _vd_ref="$_vd_name"
 
-	if [[ $typ == 'a' || $typ == 'A' ]]; then
+	if [[ $_vd_typ == 'a' || $_vd_typ == 'A' ]]; then
 		# print this as an array - indexed, sparse, associative,
 		# whatever
-		local key value
+		local _vd_key _vd_value
 
 		# optionally print length
-		if $verbose; then
-			local length=${#__vardump_name[@]}
+		if $_vd_verbose; then
+			local _vd_length=${#_vd_ref[@]}
 			printf '%s %s\n' \
-			    "${color_dim}length:${color_rst}" \
-			    "${color_length}$length${color_rst}"
+			    "${_vd_colors[dim]}length:${_vd_colors[rst]}" \
+			    "${_vd_colors[length]}$_vd_length${_vd_colors[rst]}"
 		fi
 
 		# loop keys and print the data itself
 		echo '('
-		for key in "${!__vardump_name[@]}"; do
-			value=${__vardump_name[$key]}
+		for _vd_key in "${!_vd_ref[@]}"; do
+			_vd_value=${_vd_ref[$_vd_key]}
 
 			# safely quote the key name if it's an associative array
 			# (the user controls the key names in this case so we
 			# can't trust them to be safe)
-			if [[ $typ == 'A' ]]; then
-				key=${key@Q}
+			if [[ $_vd_typ == 'A' ]]; then
+				_vd_key=${_vd_key@Q}
 			fi
 
 			# always safely quote the value
-			value=${value@Q}
+			_vd_value=${_vd_value@Q}
 
 			printf '\t[%s]=%s\n' \
-			    "${color_key}$key${color_rst}" \
-			    "${color_value}$value${color_rst}"
+			    "${_vd_colors[key]}$_vd_key${_vd_colors[rst]}" \
+			    "${_vd_colors[value]}$_vd_value${_vd_colors[rst]}"
 		done
 		echo ')'
 	else
 		# we are just a simple scalar value - print this as a regular,
 		# safely-quoted,  value.
-		echo "${color_value}${__vardump_name@Q}${color_rst}"
+		echo "${_vd_colors[value]}${_vd_ref@Q}${_vd_colors[rst]}"
 	fi
 
 	# optionally print the trailer
-	if $verbose; then
-		echo "${color_dim}--------------------------${color_rst}"
+	if $_vd_verbose; then
+		echo "${_vd_colors[dim]}--------------------------${_vd_colors[rst]}"
 	fi
 
 	return 0
 
 }
 
-# if we are run directly (not-sourced) then run through some examples
-if ! (return &>/dev/null); then
+if ! (return 0 &>/dev/null); then
+	# if we are run directly (not-sourced) then run through some examples
 	declare s='some string'
 	declare -r read_only='this cant be changed'
 	declare -i int_value=5

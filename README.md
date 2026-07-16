@@ -47,6 +47,14 @@ Options
 - `-C <always|never|auto>` Enable or disable color output, default is `auto`
 - `-v` Verbose output
 
+Known Limitations
+-----------------
+
+- Any variables used in the `vardump` function will override anything defined by
+  the user.  Because of this, all internal variables will be prefixed with
+  `_vd_` except for `OPTIND` and `OPTARG` which are used internally to parse
+  options.
+
 License
 -------
 
