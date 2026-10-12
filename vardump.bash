@@ -78,7 +78,7 @@ vardump() {
 	fi
 
 	# optionally print header
-	if "$_vd_verbose"; then
+	if $_vd_verbose; then
 		echo "${_vd_colors[dim]}--------------------------${_vd_colors[rst]}"
 		echo "${_vd_colors[dim]}vardump: ${_vd_colors[rst]}$_vd_name"
 	fi
@@ -117,7 +117,7 @@ vardump() {
 	done
 
 	# optionally print the attributes to the user
-	if "$_vd_verbose"; then
+	if $_vd_verbose; then
 		echo -n "${_vd_colors[dim]}attributes: ${_vd_colors[rst]}"
 		if [[ -n ${_vd_attributes[0]} ]]; then
 			# separate the list of attributes by a `/` character
@@ -141,7 +141,7 @@ vardump() {
 		local _vd_key _vd_value
 
 		# optionally print length
-		if "$_vd_verbose"; then
+		if $_vd_verbose; then
 			local _vd_length=${#_vd_ref[@]}
 			printf '%s %s\n' \
 			    "${_vd_colors[dim]}length:${_vd_colors[rst]}" \
@@ -175,7 +175,7 @@ vardump() {
 	fi
 
 	# optionally print the trailer
-	if "$_vd_verbose"; then
+	if $_vd_verbose; then
 		echo "${_vd_colors[dim]}--------------------------${_vd_colors[rst]}"
 	fi
 
