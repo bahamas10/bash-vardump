@@ -15,7 +15,7 @@
 #
 # Dump the given variable (by name) information and value to stdout.
 #
-# Usage: vardump [-v] <name>
+# Usage: vardump [-v] [-C always|auto|never] <name>
 #
 # Example:
 #
@@ -184,13 +184,20 @@ vardump() {
 }
 
 _vardump-complete() {
-        COMPREPLY=(
-                # add all variables
-                $(compgen -v -- "${COMP_WORDS[COMP_CWORD]}")
-
-                # add the individual flags TODO add `-C <arg>`
-                $(compgen -W '-v' -- "${COMP_WORDS[COMP_CWORD]}")
-        )
+	local input="${COMP_WORDS[COMP_CWORD]}"
+	if (( COMP_CWORD > 0 )); then
+		local prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+		if [[ "$prev_word" == '-C' ]]; then
+			mapfile -t COMPREPLY < <(compgen -W 'always auto never' -- "$input")
+			return 0
+		fi
+	fi
+	mapfile -t COMPREPLY < <(
+		# add all variables
+		compgen -v -- "$input"
+		# add the individual flags
+		compgen -W '-v -C' -- "$input"
+	)
 }
 
 if ( return 0 &>/dev/null ); then
